@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta CNPJ</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .resultado {
+            background: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+        .emoji {
+            font-size: 1.2em;
+        }
+        h3 {
+            margin-top: 20px;
+        }
+        button {
+            margin-left: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .facebook-button {
+            background-color: #3b5998;
+            border: none;
+        }
+        .facebook-button:hover {
+            background-color: #2e4a85;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Consulta de CNPJ</h1>
+    <input type="text" id="cnpjInput" placeholder="Digite o CNPJ">
+    <button onclick="consultarCNPJ()">Consultar</button>
+
+    <div id="resultado"></div>
+
+    <script>
+        async function consultarCNPJ() {
+            const cnpjInput = document.getElementById("cnpjInput").value;
+            const url = `http://localhost:3000/consulta?cnpj=${cnpjInput}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                console.log(data); // Para ver o retorno
+
+                // Usar a propriedade 'qsa' para obter os sócios
+                const socios = data.qsa ? (Array.isArray(data.qsa) ? data.qsa : []) : [];
+                const atividadesPrincipais = data.atividade_principal ? (Array.isArray(data.atividade_principal) ? data.atividade_principal : []) : [];
+                const atividadesSecundarias = data.atividades_secundarias ? (Array.isArray(data.atividades_secundarias) ? data.atividades_secundarias : []) : [];
+
+                // Função para formatar o telefone
+                const formatarTelefone = (telefone) => {
+                    return telefone ? telefone : 'N/A';
+                };
+
+                const resultado = `
+                    <div class="resultado">
+                        <p><span class="emoji">🏢</span><strong>Razão Social:</strong> ${data.nome || 'N/A'}</p>
+                        <p><span class="emoji">📛</span><strong>Nome Fantasia:</strong> ${data.fantasia || 'N/A'}</p>
+                        <p><span class="emoji">📅</span><strong>Abertura:</strong> ${data.abertura || 'N/A'}</p>
+                        <p><span class="emoji">✅</span><strong>Situação:</strong> ${data.situacao || 'N/A'}</p>
+                        <p><span class="emoji">📌</span><strong>Tipo:</strong> ${data.tipo || 'N/A'}</p>
+                        <p><span class="emoji">🌍</span><strong>Porte:</strong> ${data.porte || 'N/A'}</p>
+                        <p><span class="emoji">⚖️</span><strong>Natureza Jurídica:</strong> ${data.natureza_juridica || 'N/A'}</p>
+                        
+                        <h3>Atividades Principais:</h3>
+                        <ul>
+                            ${atividadesPrincipais.length > 0 
+                                ? atividadesPrincipais.map(ativ => `<li>${ativ.text || 'N/A'}</li>`).join('') 
+                                : '<li>Nenhuma atividade principal encontrada</li>'}
+                        </ul>
+
+                        <h3>Atividades Secundárias:</h3>
+                        <ul>
+                            ${atividadesSecundarias.length > 0 
+                                ? atividadesSecundarias.map(ativ => `<li>${ativ.text || 'N/A'}</li>`).join('') 
+                                : '<li>Nenhuma atividade secundária encontrada</li>'}
+                        </ul>
+
+                        <h3>Quadro Societário:</h3>
+                        <ol>
+                            ${socios.length > 0 
+                                ? socios.map((soc, index) => `
+                                    <li>
+                                        SOCIO ${index + 1}: ${soc.nome || 'N/A'}, ${soc.qual || 'N/A'}
+                                        <button class="facebook-button" onclick="window.open('https://www.facebook.com/search/top/?q=${encodeURIComponent(soc.nome || '')}', '_blank')">Facebook</button>
+                                    </li>
+                                `).join('') 
+                                : '<li>Nenhum sócio encontrado</li>'}
+                        </ol>
+
+                        <p><span class="emoji">📍</span><strong>Endereço:</strong> ${data.logradouro || 'N/A'}, ${data.numero || 'N/A'}, ${data.bairro || 'N/A'}</p>
+                        <p><span class="emoji">🌆</span><strong>Cidade:</strong> ${data.municipio || 'N/A'} - ${data.uf || 'N/A'}</p>
+                        <p><span class="emoji">📧</span><strong>Email:</strong> ${data.email || 'N/A'}</p>
+                        <p><span class="emoji">📞</span><strong>Telefone:</strong> ${formatarTelefone(data.telefone)}
+                            <button onclick="copiarTelefone('${data.telefone || ''}')">Copiar</button>
+                        </p>
+                        <p><span class="emoji">📅</span><strong>Data da Situação:</strong> ${data.data_situacao || 'N/A'}</p>
+                        <p><span class="emoji">🆔</span><strong>CNPJ:</strong> ${data.cnpj || 'N/A'}</p>
+                        <p><span class="emoji">🕒</span><strong>Última Atualização:</strong> ${data.ultima_atualizacao || 'N/A'}</p>
+                        <p style="margin-top: 10px;"><span class="emoji">💰</span><strong>Capital Social:</strong> R$ ${data.capital_social || 'N/A'}</p>
+                        
+                        <h3>Simples:</h3>
+                        <p>${data.simples?.optante ? 'Optante' : 'Não optante'} - Última Atualização: ${data.simples?.ultima_atualizacao || 'N/A'}</p>
+                        
+                        <h3>MEI:</h3>
+                        <p>${data.simei?.optante ? 'Optante' : 'Não optante'} - Última Atualização: ${data.simei?.ultima_atualizacao || 'N/A'}</p>
+                    </div>
+                `;
+
+                document.getElementById("resultado").innerHTML = resultado;
+
+            } catch (error) {
+                console.error('Erro ao consultar CNPJ:', error);
+                alert('Erro ao consultar CNPJ, verifique o console para mais detalhes.');
+            }
+        }
+
+        function copiarTelefone(telefone) {
+            if (telefone) {
+                navigator.clipboard.writeText(telefone).then(() => {
+                    alert('Número copiado: ' + telefone);
+                }).catch(err => {
+                    console.error('Erro ao copiar o telefone: ', err);
+                });
+            } else {
+                alert('Número não disponível para cópia.');
+            }
+        }
+    </script>
+
+</body>
+</html>
